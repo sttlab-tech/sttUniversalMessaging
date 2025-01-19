@@ -1,0 +1,133 @@
+replicaCount: 1
+
+image:
+  repository: cp.icr.io/cp/webmethods/universalmessaging/universalmessaging-server
+  pullPolicy: Always
+  tag: "11.1.1"
+
+# -- Name of the licence config map
+licenseConfigMap: "universalmessaging-license-key"
+
+# -- Image pull secret reference. By default looks for `regcred`.
+imagePullSecrets: 
+  - name: ibm-regcred
+
+um: 
+  # -- Startup command to be executed after UM was started. This can be used to enable / disable configurations or ensure that specific channels are created
+  # Example: runUMTool.sh EditRealmConfiguration -rname=nsp://localhost:9000 -JVM_Management.EnableJMX=false
+  # Next sample is to create JMS Connection Factory: runUMTool.sh CreateConnectionFactory -rname=nsp://localhost:9000 -factoryname=local_um -factorytype=default -connectionurl=nsp://{{ include \"common.names.fullname\" . }}:9000 -durabletype=S
+  startupCommand: ""
+  # -- Name of the Universal Messaging realm
+  realmName: ""
+  # -- Initial Java Heap Size (in MB)
+  initJavaMemSize: "1024"
+  # -- Maximum Java Heap Size (in MB)
+  maxJavaMemSize: "1024"
+  # -- Maximum Direct Memory Size (in GB)
+  maxDirectMemSize: "1G"
+  # -- Enable basic authentication on the server
+  basicAuthEnable: "No"
+  # -- Enable and mandate basic authentication on the server
+  basicAuthMandatory: "No"
+  # -- Enable log4j2 as logging framework by specifying this environment variable with log4j2 as value. By default fLogger (UM Native) logging framework enabled.
+  logFramework: ""
+
+# -- Overwrites Chart name of release name in workload name. As default, the workload name is release name + '-' + Chart name. The workload name is at the end release name + '-' + value of `nameOverride`.
+nameOverride: ""
+# -- Overwrites full workload name. As default, the workload name is release name + '-' + Chart name.
+fullnameOverride: "umserver"
+
+# -- The name of the main container, by default this will be Chart name.
+containerName: umserver
+
+serviceAccount:
+  create: true
+  name: "umserver-sa"
+
+serviceAccountName: umserver-sa
+
+podSecurityContext: {}
+#  fsGroup: 1724
+  
+securityContext: 
+  capabilities:
+    drop:
+    - ALL
+  runAsNonRoot: true
+
+service:
+  type:       ClusterIP
+  port:       9000
+  metricPort: 9200
+
+storage:
+  logsSize:          2Gi
+  dataSize:          2Gi
+  configurationSize: 2Mi
+
+ingress:
+  enabled: false
+
+resources: {}
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+startupProbe:
+  httpGet:
+    path: /health/
+    port: 9000
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  successThreshold: 1
+  failureThreshold: 30
+
+livenessProbe:
+  httpGet:
+    path: /health/
+    port: 9000
+  initialDelaySeconds: 0
+  periodSeconds: 15
+  timeoutSeconds: 30
+  successThreshold: 1
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health/
+    port: 9000
+  initialDelaySeconds: 0
+  periodSeconds: 15
+  timeoutSeconds: 30
+  successThreshold: 1
+  failureThreshold: 3
+
+# -- Define values for Prometheus Operator to scrap metrics via annotation or ServiceMonitor.
+prometheus:
+  path:          "/metrics"
+  port:          "9200"
+  scheme:        "http"
+  ## -- Only used on annotation 
+  scrape:        "true"
+  ## -- Only used on ServiceMonitor
+  interval:      10s
+  ## -- Only used on ServiceMonitor
+  scrapeTimeout: 10s
+
+# -- Create and enable ServiceMonitor. The default is `false`.
+serviceMonitor:
+  enabled: true
+
+# -- Import the content as license key and create a ConfigMap named by `licenseConfigMap` value. You can copy/past the content of your provided license key file here.  
+license: |
+  dummy
